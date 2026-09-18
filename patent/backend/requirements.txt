@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+pandas
+torch
+transformers
+peft
+accelerate
+bitsandbytes
+xgboost
+pytesseract
+Pillow
+scikit-learn
+setuptools
+pdfplumber
+PyPDF2
