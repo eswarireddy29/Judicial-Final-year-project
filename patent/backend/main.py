@@ -71,6 +71,17 @@ def load_models():
             "149": "191","323": "115", "504": "356",  "279": "281",
         }
         print("⚠️   Using default IPC→BNS mapping.")
+            # 3.5. InLegalBERT Semantic Embedder
+    try:
+        from transformers import AutoTokenizer, AutoModel
+        models['legalbert_tokenizer'] = AutoTokenizer.from_pretrained("law-ai/InLegalBERT")
+        models['legalbert_model'] = AutoModel.from_pretrained("law-ai/InLegalBERT")
+        models['legalbert_model'].eval()
+        print("✅  InLegalBERT semantic embedder loaded.")
+    except Exception as e:
+        models['legalbert_tokenizer'] = None
+        models['legalbert_model'] = None
+        print(f"❌  InLegalBERT failed to load: {e}")
 
     # 4. Llama-3 (optional – requires CUDA + HF token)
     models['llm']       = None
@@ -370,7 +381,31 @@ def map_ipc_to_bns(ipc_sections: list) -> dict:
         bns = mapper.get(sec) or mapper.get(sec.upper()) or mapper.get(sec.lower())
         result[f"IPC {sec}"] = f"BNS {bns}" if bns else "No direct BNS equivalent"
     return result
+# ---------------------------------------------------------------------------
+# Semantic Embedding (InLegalBERT)
+# ---------------------------------------------------------------------------
 
+def generate_semantic_embedding(text: str):
+    """
+    Generate a 768-dimensional semantic embedding for the case text using
+    InLegalBERT. Captures contextual meaning/seriousness beyond simple counts.
+    Returns None if the model isn't loaded.
+    """
+    tokenizer = models.get('legalbert_tokenizer')
+    model = models.get('legalbert_model')
+    if tokenizer is None or model is None:
+        return None
+    try:
+        import torch
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+        # Use the [CLS] token's embedding as the sentence-level representation
+        embedding = outputs.last_hidden_state[:, 0, :].squeeze().tolist()
+        return embedding
+    except Exception as e:
+        print(f"⚠ InLegalBERT embedding failed: {e}")
+        return None
 
 # ---------------------------------------------------------------------------
 # Reasoning Generation
@@ -505,6 +540,8 @@ class CaseAnalysisResponse(BaseModel):
     reasoning:         Optional[str] = None
     ipc_to_bns_mapping: Optional[dict] = None
     feature_text:      Optional[str] = None
+    semantic_embedding_dim:     Optional[int] = None
+    semantic_embedding_preview: Optional[List[float]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +574,7 @@ async def analyze_case(request: CaseAnalysisRequest):
     bns_map  = map_ipc_to_bns(feats.get('ipc_sections', []))
     reasoning = generate_reasoning(feats, score, risk_level)
     feat_text = build_feature_text(feats)
+    embedding = generate_semantic_embedding(clean)
 
     return CaseAnalysisResponse(
         complexity_score   = round(score, 1),
@@ -550,6 +588,8 @@ async def analyze_case(request: CaseAnalysisRequest):
         reasoning          = reasoning,
         ipc_to_bns_mapping = bns_map if bns_map else None,
         feature_text       = feat_text,
+        semantic_embedding_dim     = len(embedding) if embedding else None,
+        semantic_embedding_preview = [round(x, 4) for x in embedding[:5]] if embedding else None,
     )
 
 

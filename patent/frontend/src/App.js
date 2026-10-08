@@ -150,7 +150,7 @@ function App() {
           <span className="footer-brand">⚖️ Judicial Complexity &amp; Litigation Risk Engine</span>
         </p>
         <p className="footer-dev">
-          Developed by <span className="footer-name">Karimireddy Geethika Varshini</span>
+          Developed by <span className="footer-name">Bhoomireddy Eswari</span>
         </p>
         <p className="footer-sub">
           AI-powered analysis for Indian courts &nbsp;·&nbsp; For decision-support only &nbsp;·&nbsp; Not a substitute for legal advice
