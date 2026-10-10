@@ -519,6 +519,59 @@ body::before {
   line-height: 1.75;
   margin-bottom: 14px;
 }
+/* ─────────────────────────── SIMILAR PRECEDENTS ─────────────────────────── */
+.precedents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.precedent-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+}
+
+.precedent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.precedent-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.precedent-sim {
+  background: rgba(212,175,55,0.08);
+  border: 1px solid var(--border-accent);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.precedent-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.precedent-summary {
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
 
 .reasoning-box p:last-child { margin-bottom: 0; }
 .reasoning-box strong { color: var(--text-primary); }

@@ -80,3 +80,35 @@ def test_same_input_gives_same_score(client):
 def test_embedding_has_768_dimensions(client):
     r = client.post("/analyze", json={"text": VALID_CASE})
     assert r.json()["semantic_embedding_dim"] == 768
+    
+PRECEDENT_CASE = (
+    "Writ petition under Article 32 before the Supreme Court challenging the "
+    "validity of Section 66A of the IT Act on grounds of free speech under "
+    "Article 19(1)(a). The petitioner argues the provision is vague. "
+    "The respondent is the Union of India."
+)
+
+
+def test_returns_three_precedents(client):
+    r = client.post("/analyze", json={"text": PRECEDENT_CASE})
+    assert r.status_code == 200
+    assert len(r.json()["similar_precedents"]) == 3
+
+
+def test_precedent_has_required_fields(client):
+    r = client.post("/analyze", json={"text": PRECEDENT_CASE})
+    first = r.json()["similar_precedents"][0]
+    for field in ["case_name", "year", "court", "citation", "summary", "similarity"]:
+        assert field in first
+
+
+def test_similarity_is_between_0_and_1(client):
+    r = client.post("/analyze", json={"text": PRECEDENT_CASE})
+    for p in r.json()["similar_precedents"]:
+        assert 0 <= p["similarity"] <= 1
+
+
+def test_66a_case_retrieves_shreya_singhal(client):
+    r = client.post("/analyze", json={"text": PRECEDENT_CASE})
+    names = [p["case_name"] for p in r.json()["similar_precedents"]]
+    assert "Shreya Singhal v. Union of India" in names

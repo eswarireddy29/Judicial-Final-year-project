@@ -83,6 +83,17 @@ def load_models():
         models['legalbert_model'] = None
         print(f"❌  InLegalBERT failed to load: {e}")
 
+    # 3.6. ChromaDB precedent store (RAG)
+    try:
+        import chromadb
+        chroma_path = os.path.join(model_dir, 'chroma_db')
+        client = chromadb.PersistentClient(path=chroma_path)
+        models['precedents'] = client.get_collection("precedents")
+        print(f"✅  Precedent index loaded ({models['precedents'].count()} cases).")
+    except Exception as e:
+        models['precedents'] = None
+        print(f"❌  Precedent index failed to load: {e}")
+        
     # 4. Llama-3 (optional – requires CUDA + HF token)
     models['llm']       = None
     models['tokenizer'] = None
@@ -434,7 +445,42 @@ RISK_LABELS = {
         'recommendation': 'Suitable for fast-track or summary proceedings. Consider Lok Adalat or alternative dispute resolution.',
     },
 }
+def retrieve_precedents(text: str, k: int = 3):
+    """Find the k most similar landmark cases from the ChromaDB index."""
+    collection = models.get('precedents')
+    tokenizer = models.get('legalbert_tokenizer')
+    model = models.get('legalbert_model')
+    if collection is None or tokenizer is None or model is None:
+        return []
+    try:
+        import torch
+        inputs = tokenizer(
+            text, return_tensors="pt", truncation=True, max_length=512, padding=True
+        )
+        with torch.no_grad():
+            out = model(**inputs)
+        mask = inputs["attention_mask"].unsqueeze(-1).float()
+        summed = (out.last_hidden_state * mask).sum(dim=1)
+        counts = mask.sum(dim=1).clamp(min=1e-9)
+        query_emb = (summed / counts)[0].tolist()
 
+        res = collection.query(query_embeddings=[query_emb], n_results=k)
+        results = []
+        for meta, dist in zip(res['metadatas'][0], res['distances'][0]):
+            results.append({
+                "case_name":  meta["case_name"],
+                "year":       meta["year"],
+                "court":      meta["court"],
+                "citation":   meta["citation"],
+                "topics":     meta["topics"],
+                "summary":    meta["summary"],
+                "similarity": round(1 - dist, 3),
+            })
+        return results
+    except Exception as e:
+        print(f"⚠ Precedent retrieval failed: {e}")
+        return []
+    
 def generate_reasoning(features: dict, score: float, risk_level: str) -> str:
     """Generate a structured legal reasoning / risk audit."""
     if models.get('llm') and models.get('tokenizer'):
@@ -542,6 +588,7 @@ class CaseAnalysisResponse(BaseModel):
     feature_text:      Optional[str] = None
     semantic_embedding_dim:     Optional[int] = None
     semantic_embedding_preview: Optional[List[float]] = None
+    similar_precedents: Optional[List[dict]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -575,6 +622,7 @@ async def analyze_case(request: CaseAnalysisRequest):
     reasoning = generate_reasoning(feats, score, risk_level)
     feat_text = build_feature_text(feats)
     embedding = generate_semantic_embedding(clean)
+    precedents = retrieve_precedents(request.text, k=3)
 
     return CaseAnalysisResponse(
         complexity_score   = round(score, 1),
@@ -590,8 +638,9 @@ async def analyze_case(request: CaseAnalysisRequest):
         feature_text       = feat_text,
         semantic_embedding_dim     = len(embedding) if embedding else None,
         semantic_embedding_preview = [round(x, 4) for x in embedding[:5]] if embedding else None,
+        similar_precedents = precedents if precedents else None,
     )
-
+        
 
 @app.post("/analyze-document", response_model=CaseAnalysisResponse)
 async def analyze_document(file: UploadFile = File(...)):

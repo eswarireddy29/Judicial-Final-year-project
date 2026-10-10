@@ -29,6 +29,7 @@ function Dashboard({ result, onReset }) {
     estimated_timeline,
     reasoning,
     ipc_to_bns_mapping,
+    similar_precedents,
   } = result;
 
   return (
@@ -75,6 +76,29 @@ function Dashboard({ result, onReset }) {
           <div className="section-title">🧠 Judicial Risk Audit</div>
           <div className="reasoning-box">
             {renderReasoning(reasoning)}
+          </div>
+        </>
+      )}
+      
+      {/* Similar Precedents */}
+      {similar_precedents && similar_precedents.length > 0 && (
+        <>
+          <div className="section-title">⚖️ Similar Precedents</div>
+          <div className="precedents-list">
+            {similar_precedents.map((p, i) => (
+              <div key={i} className="precedent-card">
+                <div className="precedent-header">
+                  <span className="precedent-name">{p.case_name}</span>
+                  <span className="precedent-sim">
+                    {Math.round(p.similarity * 100)}% match
+                  </span>
+                </div>
+                <div className="precedent-meta">
+                  {p.court} · {p.year} · {p.citation}
+                </div>
+                <div className="precedent-summary">{p.summary}</div>
+              </div>
+            ))}
           </div>
         </>
       )}
