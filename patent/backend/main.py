@@ -481,7 +481,7 @@ def retrieve_precedents(text: str, k: int = 3):
         print(f"⚠ Precedent retrieval failed: {e}")
         return []
     
-def generate_reasoning(features: dict, score: float, risk_level: str) -> str:
+def generate_reasoning(features: dict, score: float, risk_level: str, precedents=None) -> str:
     """Generate a structured legal reasoning / risk audit."""
     if models.get('llm') and models.get('tokenizer'):
         try:
@@ -555,6 +555,15 @@ def generate_reasoning(features: dict, score: float, risk_level: str) -> str:
 
     if factors:
         parts.append("\n\n**Key Complexity Factors:**\n" + "\n".join(factors))
+    if precedents:
+        names = "; ".join(
+            f"{p['case_name']} ({p['year']}), {p['citation']}" for p in precedents
+        )
+        parts.append(
+            "\n\n**Similar Precedents:** The closest landmark cases found in the "
+            f"precedent index are {names}. They are retrieved by semantic "
+            "similarity and listed for reference."
+        )
 
     parts.append(f"\n\n**Judicial Recommendation:** {info['recommendation']}")
 
@@ -619,10 +628,10 @@ async def analyze_case(request: CaseAnalysisRequest):
 
     timeline_map = RISK_LABELS.get(risk_level, RISK_LABELS['Moderate'])
     bns_map  = map_ipc_to_bns(feats.get('ipc_sections', []))
-    reasoning = generate_reasoning(feats, score, risk_level)
+    precedents = retrieve_precedents(request.text, k=3)
+    reasoning = generate_reasoning(feats, score, risk_level, precedents)
     feat_text = build_feature_text(feats)
     embedding = generate_semantic_embedding(clean)
-    precedents = retrieve_precedents(request.text, k=3)
 
     return CaseAnalysisResponse(
         complexity_score   = round(score, 1),

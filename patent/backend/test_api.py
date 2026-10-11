@@ -112,3 +112,9 @@ def test_66a_case_retrieves_shreya_singhal(client):
     r = client.post("/analyze", json={"text": PRECEDENT_CASE})
     names = [p["case_name"] for p in r.json()["similar_precedents"]]
     assert "Shreya Singhal v. Union of India" in names
+
+def test_audit_text_mentions_precedents(client):
+    r = client.post("/analyze", json={"text": PRECEDENT_CASE})
+    reasoning = r.json()["reasoning"]
+    assert "Similar Precedents" in reasoning
+    assert "Shreya Singhal" in reasoning
