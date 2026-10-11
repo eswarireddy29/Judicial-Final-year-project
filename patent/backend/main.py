@@ -682,6 +682,8 @@ def correct_ocr_errors(text: str) -> str:
 async def analyze_document(file: UploadFile = File(...)):
     """Analyze an uploaded legal document (PDF / image / text)."""
     content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty.")
     text = ""
 
     ctype = file.content_type or ""

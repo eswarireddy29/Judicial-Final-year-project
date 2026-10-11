@@ -128,3 +128,18 @@ def test_ocr_joins_hyphenated_words(client):
     from main import correct_ocr_errors
     fixed = correct_ocr_errors("The prosecu-\ntion examined two witnesses.")
     assert "prosecution" in fixed
+def test_corrupted_pdf_gives_clean_error(client):
+    bad = b"%PDF-1.4 this file is corrupted and not a real pdf"
+    r = client.post(
+        "/analyze-document",
+        files={"file": ("bad.pdf", bad, "application/pdf")},
+    )
+    assert r.status_code in (400, 422)
+
+
+def test_empty_pdf_gives_clean_error(client):
+    r = client.post(
+        "/analyze-document",
+        files={"file": ("empty.pdf", b"", "application/pdf")},
+    )
+    assert r.status_code in (400, 422)
