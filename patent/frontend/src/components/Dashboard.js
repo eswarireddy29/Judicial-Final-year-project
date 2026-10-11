@@ -30,6 +30,7 @@ function Dashboard({ result, onReset }) {
     reasoning,
     ipc_to_bns_mapping,
     similar_precedents,
+    score_breakdown,
   } = result;
 
   return (
@@ -70,6 +71,38 @@ function Dashboard({ result, onReset }) {
         </>
       )}
 
+            {/* Score breakdown */}
+      {score_breakdown && (
+        <>
+          <div className="section-title">📊 Score Breakdown</div>
+          <div className="breakdown-list">
+            {score_breakdown.components.map((c, i) => (
+              <div key={i} className="breakdown-row">
+                <div className="breakdown-label">
+                  {c.factor} <span className="breakdown-count">({c.count})</span>
+                </div>
+                <div className="breakdown-bar">
+                  <div
+                    className="breakdown-fill"
+                    style={{ width: `${(c.points / c.max) * 100}%` }}
+                  />
+                </div>
+                <div className="breakdown-points">{c.points} / {c.max}</div>
+              </div>
+            ))}
+            <div className="breakdown-note">
+              Factor total: {score_breakdown.base_total}. Final score: {score_breakdown.final_score}.
+            </div>
+            {score_breakdown.high_risk_floor && (
+              <div className="breakdown-note">
+                High-risk override: {score_breakdown.high_risk_flags} high-risk flag(s) set the
+                minimum score to {score_breakdown.high_risk_floor}.
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      
       {/* Reasoning */}
       {reasoning && (
         <>

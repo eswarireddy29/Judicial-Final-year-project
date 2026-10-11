@@ -352,6 +352,34 @@ def calculate_complexity(clean_text: str, features: dict) -> float:
     return score
 
 
+def score_breakdown(features: dict) -> dict:
+    """Show how many points each factor added to the heuristic score."""
+    wc  = features['witness_count']
+    cc  = features['citation_count']
+    sd  = features['statutory_depth']
+    secs = features.get('ipc_sections', [])
+    ac  = features.get('accused_count', 0)
+    hr_flags = features.get('high_risk_flags', 0)
+
+    components = [
+        {"factor": "Witnesses",                "count": wc,         "points": round(min(wc * 4.5, 40), 1),         "max": 40},
+        {"factor": "Citations",                "count": cc,         "points": round(min(cc * 3.5, 30), 1),         "max": 30},
+        {"factor": "Constitutional provisions","count": sd,         "points": round(min(sd * 5.0, 20), 1),         "max": 20},
+        {"factor": "IPC / BNS sections",       "count": len(secs),  "points": round(min(len(secs) * 2.0, 6), 1),   "max": 6},
+        {"factor": "Accused / parties",        "count": ac,         "points": round(min(ac * 0.8, 4), 1),          "max": 4},
+    ]
+    base_total = round(sum(c["points"] for c in components), 1)
+    floor = (75.0 + hr_flags * 2.0) if hr_flags > 0 else None
+
+    return {
+        "components": components,
+        "base_total": base_total,
+        "high_risk_flags": hr_flags,
+        "high_risk_floor": floor,
+        "final_score": heuristic_score(features),
+    }
+
+
 def heuristic_score(features: dict) -> float:
     """
     Deterministic weighted scoring — the 'Logic Brain' of the system.
@@ -598,6 +626,8 @@ class CaseAnalysisResponse(BaseModel):
     semantic_embedding_dim:     Optional[int] = None
     semantic_embedding_preview: Optional[List[float]] = None
     similar_precedents: Optional[List[dict]] = None
+    score_breakdown: Optional[dict] = None
+    
 
 
 # ---------------------------------------------------------------------------
@@ -648,6 +678,7 @@ async def analyze_case(request: CaseAnalysisRequest):
         semantic_embedding_dim     = len(embedding) if embedding else None,
         semantic_embedding_preview = [round(x, 4) for x in embedding[:5]] if embedding else None,
         similar_precedents = precedents if precedents else None,
+        score_breakdown = score_breakdown(feats),
     )
 def correct_ocr_errors(text: str) -> str:
     """Fix common OCR mistakes in scanned legal text (FR-02)."""

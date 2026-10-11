@@ -143,3 +143,13 @@ def test_empty_pdf_gives_clean_error(client):
         files={"file": ("empty.pdf", b"", "application/pdf")},
     )
     assert r.status_code in (400, 422)
+
+def test_score_breakdown_is_returned(client):
+    r = client.post("/analyze", json={"text": VALID_CASE})
+    data = r.json()
+    breakdown = data["score_breakdown"]
+    assert len(breakdown["components"]) == 5
+    assert breakdown["final_score"] == data["complexity_score"]
+    witness = breakdown["components"][0]
+    assert witness["factor"] == "Witnesses"
+    assert witness["points"] == 27.0

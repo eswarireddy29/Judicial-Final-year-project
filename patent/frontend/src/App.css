@@ -575,3 +575,55 @@ body::before {
 
 .reasoning-box p:last-child { margin-bottom: 0; }
 .reasoning-box strong { color: var(--text-primary); }
+
+/* ─────────────────────────── SCORE BREAKDOWN ─────────────────────────── */
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 70px;
+  align-items: center;
+  gap: 12px;
+}
+
+.breakdown-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.breakdown-count {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.breakdown-bar {
+  height: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 20px;
+}
+
+.breakdown-points {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.breakdown-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
