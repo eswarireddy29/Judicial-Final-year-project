@@ -649,6 +649,33 @@ async def analyze_case(request: CaseAnalysisRequest):
         semantic_embedding_preview = [round(x, 4) for x in embedding[:5]] if embedding else None,
         similar_precedents = precedents if precedents else None,
     )
+def correct_ocr_errors(text: str) -> str:
+    """Fix common OCR mistakes in scanned legal text (FR-02)."""
+    # Join words that were split across lines with a hyphen
+    text = re.sub(r'(\w)-\n(\w)', r'\1\2', text)
+
+    # Fix letters misread as digits inside section / article numbers
+    def fix_number(match):
+        label, number = match.group(1), match.group(2)
+        if any(ch.isdigit() for ch in number):
+            number = number.replace('O', '0').replace('o', '0')
+            number = number.replace('l', '1').replace('I', '1')
+        return f"{label} {number}"
+
+    text = re.sub(
+        r'\b(Section|section|Sec\.?|Article|article)\s+([0-9OolI]{1,5}[A-Z]?)\b',
+        fix_number,
+        text,
+    )
+
+    # Fix common misreads of key legal terms
+    text = re.sub(r'\b[1lI]PC\b', 'IPC', text)
+    text = re.sub(r'\bSuprerne\b', 'Supreme', text)
+    text = re.sub(r'\bCourl\b', 'Court', text)
+
+    # Tidy repeated spaces
+    text = re.sub(r'[ \t]+', ' ', text)
+    return text
         
 
 @app.post("/analyze-document", response_model=CaseAnalysisResponse)
@@ -703,6 +730,7 @@ async def analyze_document(file: UploadFile = File(...)):
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract text from the uploaded document.")
 
+    text = correct_ocr_errors(text)
     return await analyze_case(CaseAnalysisRequest(text=text))
 
 
@@ -715,6 +743,8 @@ async def health_check():
             "tfidf_vectorizer":   models.get('vectorizer') is not None,
             "ipc_bns_mapper":     models.get('mapper')    is not None,
             "llama3":             models.get('llm')       is not None,
+            "inlegalbert":        models.get('legalbert_model') is not None,
+            "precedent_index":    models.get('precedents') is not None,
         },
         "vectorizer_features": models['vectorizer'].max_features if models.get('vectorizer') else 0,
         "mapper_entries":      len(models['mapper']) if models.get('mapper') else 0,

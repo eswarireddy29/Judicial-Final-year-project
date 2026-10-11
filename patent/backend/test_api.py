@@ -118,3 +118,13 @@ def test_audit_text_mentions_precedents(client):
     reasoning = r.json()["reasoning"]
     assert "Similar Precedents" in reasoning
     assert "Shreya Singhal" in reasoning
+def test_ocr_fixes_section_number_and_ipc(client):
+    from main import correct_ocr_errors
+    fixed = correct_ocr_errors("The accused is charged under Section 3O2 lPC.")
+    assert "Section 302 IPC" in fixed
+
+
+def test_ocr_joins_hyphenated_words(client):
+    from main import correct_ocr_errors
+    fixed = correct_ocr_errors("The prosecu-\ntion examined two witnesses.")
+    assert "prosecution" in fixed
