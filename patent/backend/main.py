@@ -351,7 +351,62 @@ def calculate_complexity(clean_text: str, features: dict) -> float:
 
     return score
 
+def shap_explanation(features: dict) -> dict:
+    """SHAP values for the heuristic score, computed for this case."""
+    try:
+        import numpy as np
+        import shap
 
+        names = [
+            "Witnesses", "Citations", "Constitutional provisions",
+            "IPC / BNS sections", "Accused / parties", "High-risk flags",
+        ]
+
+        def to_features(row):
+            return {
+                "witness_count": row[0],
+                "citation_count": row[1],
+                "statutory_depth": row[2],
+                "ipc_sections": ["x"] * int(round(row[3])),
+                "accused_count": row[4],
+                "hearing_count": 0,
+                "high_risk_flags": row[5],
+            }
+
+        def model_fn(X):
+            return np.array([heuristic_score(to_features(r)) for r in X])
+
+        x = np.array([[
+            features['witness_count'],
+            features['citation_count'],
+            features['statutory_depth'],
+            len(features.get('ipc_sections', [])),
+            features.get('accused_count', 0),
+            features.get('high_risk_flags', 0),
+        ]], dtype=float)
+
+        background = np.array([
+            [0, 0, 0, 0, 0, 0],
+            [1, 1, 1, 0, 1, 0],
+            [3, 2, 2, 1, 2, 0],
+            [6, 4, 4, 2, 3, 1],
+        ], dtype=float)
+
+        explainer = shap.KernelExplainer(model_fn, background)
+        values = np.array(explainer.shap_values(x, silent=True)).reshape(-1)
+        base = float(np.ravel(explainer.expected_value)[0])
+
+        return {
+            "base_value": round(base, 2),
+            "contributions": [
+                {"feature": n, "value": float(v), "shap": round(float(s), 2)}
+                for n, v, s in zip(names, x[0], values)
+            ],
+        }
+    except Exception as e:
+        print(f"⚠ SHAP explanation failed: {e}")
+        return None
+    
 def score_breakdown(features: dict) -> dict:
     """Show how many points each factor added to the heuristic score."""
     wc  = features['witness_count']
@@ -627,6 +682,7 @@ class CaseAnalysisResponse(BaseModel):
     semantic_embedding_preview: Optional[List[float]] = None
     similar_precedents: Optional[List[dict]] = None
     score_breakdown: Optional[dict] = None
+    shap_values: Optional[dict] = None
     
 
 
@@ -679,6 +735,7 @@ async def analyze_case(request: CaseAnalysisRequest):
         semantic_embedding_preview = [round(x, 4) for x in embedding[:5]] if embedding else None,
         similar_precedents = precedents if precedents else None,
         score_breakdown = score_breakdown(feats),
+        shap_values = shap_explanation(feats),
     )
 def correct_ocr_errors(text: str) -> str:
     """Fix common OCR mistakes in scanned legal text (FR-02)."""

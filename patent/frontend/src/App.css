@@ -627,3 +627,26 @@ body::before {
   color: var(--text-muted);
   margin-top: 4px;
 }
+
+/* ─────────────────────────── SHAP EXPLANATION ─────────────────────────── */
+.shap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.shap-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 70px;
+  align-items: center;
+  gap: 12px;
+}
+
+.shap-fill {
+  height: 100%;
+  border-radius: 20px;
+}
+
+.shap-pos { background: var(--gold); }
+.shap-neg { background: var(--critical); }

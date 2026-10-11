@@ -153,3 +153,12 @@ def test_score_breakdown_is_returned(client):
     witness = breakdown["components"][0]
     assert witness["factor"] == "Witnesses"
     assert witness["points"] == 27.0
+def test_shap_values_add_up_to_score(client):
+    r = client.post("/analyze", json={"text": VALID_CASE})
+    data = r.json()
+    shap_data = data["shap_values"]
+    assert len(shap_data["contributions"]) == 6
+    total = shap_data["base_value"] + sum(c["shap"] for c in shap_data["contributions"])
+    assert abs(total - data["complexity_score"]) < 0.5
+
+    

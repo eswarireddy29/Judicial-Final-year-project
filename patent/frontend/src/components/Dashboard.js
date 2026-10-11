@@ -31,6 +31,7 @@ function Dashboard({ result, onReset }) {
     ipc_to_bns_mapping,
     similar_precedents,
     score_breakdown,
+    shap_values,
   } = result;
 
   return (
@@ -102,6 +103,41 @@ function Dashboard({ result, onReset }) {
           </div>
         </>
       )}
+            {/* SHAP explanation */}
+      {shap_values && shap_values.contributions && (
+        <>
+          <div className="section-title">🔍 SHAP Explanation</div>
+          <div className="shap-list">
+            <div className="breakdown-note">
+              Base value: {shap_values.base_value}. Each bar shows how much a factor moved
+              the score away from the base value.
+            </div>
+            {shap_values.contributions.map((c, i) => {
+              const maxAbs = Math.max(
+                ...shap_values.contributions.map((x) => Math.abs(x.shap)),
+                0.01
+              );
+              return (
+                <div key={i} className="shap-row">
+                  <div className="breakdown-label">
+                    {c.feature} <span className="breakdown-count">({c.value})</span>
+                  </div>
+                  <div className="breakdown-bar">
+                    <div
+                      className={`shap-fill ${c.shap >= 0 ? 'shap-pos' : 'shap-neg'}`}
+                      style={{ width: `${(Math.abs(c.shap) / maxAbs) * 100}%` }}
+                    />
+                  </div>
+                  <div className="breakdown-points">
+                    {c.shap >= 0 ? '+' : ''}{c.shap}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       
       {/* Reasoning */}
       {reasoning && (
