@@ -15,3 +15,9 @@ scikit-learn
 setuptools
 pdfplumber
 PyPDF2
+chromadb
+shap
+matplotlib
+pypdfium2
+pytest
+httpx
